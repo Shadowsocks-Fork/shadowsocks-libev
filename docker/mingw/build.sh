@@ -29,13 +29,18 @@ build_proj() {
     host=$arch-w64-mingw32
     prefix=${DIST}/$arch
     dep=${PREFIX}/$arch
+    cpu="$(nproc --all)"
 
     cd "$SRC"
-    git clone ${PROJ_URL} proj
-    cd proj
-    git checkout ${PROJ_REV}
-    git submodule update --init
-    ./autogen.sh
+    if ! [ -d proj ]; then
+        git clone ${PROJ_URL} proj
+        cd proj
+        git checkout ${PROJ_REV}
+        git submodule update --init
+        ./autogen.sh
+    else
+        cd proj
+    fi
     ./configure --host=${host} --prefix=${prefix} \
       --disable-documentation \
       --with-ev="$dep" \
@@ -45,7 +50,7 @@ build_proj() {
       --with-cares="$dep" \
       CFLAGS="-DCARES_STATICLIB -DPCRE_STATIC"
     make clean
-    make LDFLAGS="-all-static -L${dep}/lib"
+    make -j$cpu LDFLAGS="-all-static -L${dep}/lib"
     make install-strip
 
     # Reference SIP003 plugin (Experimental)
@@ -55,16 +60,20 @@ build_proj() {
     PLUGIN_REV=master
 
     cd "$SRC"
-    git clone ${PLUGIN_URL} plugin
-    cd plugin
-    git checkout ${PLUGIN_REV}
-    git submodule update --init
-    ./autogen.sh
+    if ! [ -d plugin ]; then
+        git clone ${PLUGIN_URL} plugin
+        cd plugin
+        git checkout ${PLUGIN_REV}
+        git submodule update --init
+        ./autogen.sh
+    else
+        cd plugin
+    fi
     ./configure --host=${host} --prefix=${prefix} \
       --disable-documentation \
       --with-ev="$dep"
     make clean
-    make LDFLAGS="-all-static -L${dep}/lib"
+    make -j$cpu LDFLAGS="-all-static -L${dep}/lib"
     make install-strip
 }
 
